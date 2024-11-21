@@ -1,9 +1,81 @@
-import example.pepita
+import example.*
 
-describe "group of tests for pepita" {
+describe "tests" {
 
-  test "pepita has initial energy" {
-    assert.equals(100, pepita.energy())
+  test "Compra efectivo y debito" {
+    const targetaDeb = new TarjetaDebito(dinero=500)
+
+    const pepe = new Persona(tarjetasDebito=[targetaDeb])
+
+    assert.that( pepe.cosasCompradas().size() == 0 ) // Empieza sin nada
+    assert.that( pepe.formaPagoPreferida().dinero() == 100 ) // tiene 100 pesos
+
+    // Compra con efectivo
+    pepe.comprar("Compu", 50)
+
+    assert.that( pepe.cosasCompradas().size() == 1 ) // Compro la compu
+    assert.that( pepe.cosasCompradas().contains("Compu") )
+    assert.that( pepe.formaPagoPreferida().dinero() == 50 ) // gasto 50
+
+    // No puede comprar el coche con efectivo
+    pepe.comprar("Coche", 500)
+
+    // Sigue todo igual
+    assert.that( pepe.cosasCompradas().size() == 1 )
+    assert.notThat( pepe.cosasCompradas().contains("Coche") )
+    assert.that( pepe.formaPagoPreferida().dinero() == 50 )
+
+    // Cambia metodo de compra a su targeta de debito
+    pepe.cambiarFormaPago(targetaDeb)
+    assert.that( pepe.formaPagoPreferida().dinero() == 500 ) // Tiene mas dinero en este metodo
+
+    pepe.comprar("Coche", 500)
+    assert.that( pepe.cosasCompradas().contains("Coche") )
+    assert.that( pepe.formaPagoPreferida().dinero() == 0 )
   }
+
+  test "Compra credito" {
+    const bancoPdeP = new Banco(montoMaximo=1000, cantCuotas=10)
+    const targetaCredito = new TarjetaCredito(bancoEmisor=bancoPdeP)
+
+    const pepe = new Persona(tarjetasCredito=[targetaCredito])
+
+    assert.that( pepe.cosasCompradas().size() == 0 ) // Empieza sin nada
+    assert.that( pepe.formaPagoPreferida().dinero() == 100 ) // tiene 100 pesos
+
+    // No puede comprar una casa
+    pepe.comprar("Casa", 1000)
+
+    assert.notThat( pepe.cosasCompradas().contains("Casa") )
+    assert.that( pepe.formaPagoPreferida().dinero() == 100 )
+
+    // Cambia a credito y lo compra de nuevo
+    pepe.cambiarFormaPago(targetaCredito)
+    pepe.comprar("Casa", 1000)
+
+    assert.that( pepe.cosasCompradas().contains("Casa") )
+    assert.that( pepe.cuotas().size() == 1 )
+    // la cantidad de cuotas que debe son 10
+    assert.that( pepe.cuotas().get(0).cuotasRestantes() == 10 )
+  }
+
+  test "Cobro de sueldo" {
+    const unaCuota = new Cuota(cuotasRestantes=3, mesVencimiento=2, monto=50)
+
+    const pepe = new Persona(cuotas=[unaCuota], sueldo=500)
+
+    // Pepe empieza con una deuda de 3 cuotas y 100 pesos
+    assert.that( pepe.formaPagoPreferida().dinero() == 100 )
+    assert.that( pepe.cuotas().get(0).cuotasRestantes() == 3 )
+
+    // Pepe cobra 500 pesos, de los cuales usara 100 para pagar sus deudas
+    // Por lo que tendra: 100(inicial) + 500(sueldo) - 50(cuota) = 550 pesos
+    // Y solo le quedaran 2 cuotas
+    pepe.cobrar()
+
+    assert.that( pepe.formaPagoPreferida().dinero() == 550 )
+    assert.that( pepe.cuotas().get(0).cuotasRestantes() == 2 )
+  }
+
 
 }
